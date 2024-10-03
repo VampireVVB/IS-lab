@@ -1,38 +1,50 @@
-from Crypto.Util.number import long_to_bytes, bytes_to_long
+import random
+from sympy import mod_inverse
 
-# Define the RSA parameters
-n = 323
-e = 5
-d = 173
+# Function to generate a prime number (for simplicity, using a small prime)
+def generate_prime():
+    return 23  # p (a small prime for demonstration)
 
-# Define the message
-message = "Cryptographic Protocols"
+# Function to generate ElGamal keys
+def generate_keys():
+    p = generate_prime()
+    g = 5  # Generator
+    x = random.randint(1, p - 2)  # Private key
+    h = pow(g, x, p)  # Public key component
+    return (p, g, h), x  # Public key (p, g, h) and private key x
 
-# Function to encrypt the message using RSA
-def encrypt_rsa(message, n, e):
-    # Convert the message to bytes and then to a long integer
-    message_bytes = message.encode()
-    message_int = bytes_to_long(message_bytes)
+# Function to encrypt a message using ElGamal
+def elgamal_encrypt(public_key, message):
+    p, g, h = public_key
+    k = random.randint(1, p - 2)  # Random integer k
+    c1 = pow(g, k, p)  # c1 = g^k mod p
+    c2 = (pow(h, k, p) * int.from_bytes(message.encode(), 'big')) % p  # c2 = (h^k * m) mod p
+    return c1, c2
+
+# Function to decrypt a message using ElGamal
+def elgamal_decrypt(private_key, ciphertext, public_key):
+    p, _, _ = public_key
+    x = private_key
+    c1, c2 = ciphertext
+    s = pow(c1, x, p)  # s = c1^x mod p
+    s_inv = mod_inverse(s, p)  # s_inv = s^(-1) mod p
+    m = (c2 * s_inv) % p  # m = (c2 * s_inv) mod p
+    return m.to_bytes((m.bit_length() + 7) // 8, 'big').decode()  # Convert back to string
+
+# Example usage
+if __name__ == "__main__":
+    # Generate keys
+    public_key, private_key = generate_keys()
     
-    # Encrypt the message using the RSA formula: ciphertext = (message^e) mod n
-    ciphertext_int = pow(message_int, e, n)
-    return ciphertext_int
-
-# Function to decrypt the ciphertext using RSA
-def decrypt_rsa(ciphertext_int, n, d):
-    # Decrypt the ciphertext using the RSA formula: decrypted_message = (ciphertext^d) mod n
-    decrypted_int = pow(ciphertext_int, d, n)
+    # Encrypt the message
+    message = "Confidential Data"
+    ciphertext = elgamal_encrypt(public_key, message)
     
-    # Convert the long integer back to bytes
-    decrypted_bytes = long_to_bytes(decrypted_int)
-    return decrypted_bytes.decode()
+    # Decrypt the ciphertext
+    decrypted_message = elgamal_decrypt(private_key, ciphertext, public_key)
+    
+    # Display results
+    print("Original Message:", message)
+    print("Ciphertext (c1, c2):", ciphertext)
+    print("Decrypted Message:", decrypted_message)
 
-# Encrypt the message
-ciphertext = encrypt_rsa(message, n, e)
-
-# Decrypt the ciphertext
-decrypted_message = decrypt_rsa(ciphertext, n, d)
-
-# Display results
-print("RSA Ciphertext (as integer):", ciphertext)
-print("RSA Decrypted Message:", decrypted_message)
